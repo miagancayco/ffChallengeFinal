@@ -18,8 +18,10 @@ def makeTable():
             if(tIndex < len(trainingSet) and r[0] == trainingSet[tIndex][0]):
                 trainingSet[tIndex].append(r)
                 tIndex += 1
+    for t in trainingSet:
+        print t
     return trainingSet
 
-#do the kNN 
+#do the kNN
 
 makeTable()
