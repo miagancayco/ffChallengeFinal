@@ -13,7 +13,12 @@ def parseData():
             famID = famInfo[0]
             for family in familyData:
                 familyID = family[0]
-                if(famID == familyID): #append to family in familyData with same id number
+                #add corresponding background information to appropriate family
+                #in familyData by checking ID number
+                if(famID == familyID):
                     family.extend(famInfo)
     return familyData
+classifySubsection(subsection, child, k){
+
+}
 parseData()
