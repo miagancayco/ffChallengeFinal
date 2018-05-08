@@ -4,20 +4,23 @@ import csv
 def parseData():
     familyData = [] # list of child lists that will return
     with open('train.csv') as csvfile:
-        tReader = csv.reader(csvfile, delimiter = ",")
-        for trainInfo in tReader:
-            familyData.append(trainInfo)
+        tReader = csv.DictReader(csvfile)
+        for row in tReader:
+            familyData.append(row)
     with open('background.csv') as csvfile:
-        bReader = csv.reader(csvfile, delimiter = ",")
-        for famInfo in bReader:
-            famID = famInfo[0]
+        bReader = csv.DictReader(csvfile)
+        for row in bReader:
+            famID = row.get('challengeID')
             for family in familyData:
-                familyID = family[0]
+                familyID = family.get('challengeID')
                 #add corresponding background information to appropriate family
                 #in familyData by checking ID number
                 if famID == familyID:
-                    family.extend(famInfo)
+                    family.update(row)
     return familyData
+
+
+
 #given a dataset representing numerous families' answers to a specific questionnaire subsection
 #(e.g. child health, mother father relationships, household economic status) and a
 #child to classify, return classification of a child based on top k neighbors with most answers
@@ -49,7 +52,6 @@ def getNeighbors(subsection, childToClassify, k):
     return neighbors
 #return a list of children in subsection and corresponding number of answers have
 #in common
-#side note:
 def countAnsInCommon(subsection, childToClassify):
     result = []
     #for each child represented, count answers have in common with child
@@ -63,7 +65,5 @@ def countAnsInCommon(subsection, childToClassify):
         result.append(childAnswers)
     return result
 
-testChildren = [[1, 0, 0, 1, 1], [0, 0, 0, 1, 1], [1, 0, 1, 1, 1], [1, 1, 1, 1, 1],
-[0, 0, 0, 0, 0], [1, 0, 0, 0, 0], [0, 0, 0, 0, 1]]
-testChild = [1, 0, 1, 1, 0]
-print getNeighbors(testChildren, testChild, 3)
+data = parseData()
+print data[0]
