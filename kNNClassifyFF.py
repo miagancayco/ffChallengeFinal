@@ -7,7 +7,6 @@ def parseData():
         tReader = csv.DictReader(csvfile)
         for row in tReader:
             familyData.append(row)
-            print row
     with open('background.csv') as csvfile:
         bReader = csv.DictReader(csvfile)
         for row in bReader:
@@ -42,37 +41,44 @@ def resetMin(neighbors):
     return result
 
 #return number of answers have in common
-def countAnsInCommon(childA, childB):
-    commonAns = 0
+def countAnsInCommon(sortByFn, sortParam, childA, childB):
+    notAsked = '-5' #value indicates that person was not asked given question
+    skipped = '-6' # value indicates that interviewer skipped question
+    notInWave = '-9' #indicates question was not asked in wave
     #iterating through all answers in child data and counting all answers have in common
-    for i in range(0, len(childA)): #note: adjust so make sure that skip over parts of list that have to do with classifications
-        if childB[i] == childA[i]:
+    commonAns = 0
+    for question in childA:
+        if sortByFn(question, sortParam) and question != notAsked and question != skipped and question != notInWave and question != 'NA' and childB[question] == childA[question]:
             commonAns += 1
     return commonAns
-#given family survey data, group questions according to which year asked
-def groupByYear(year):
-    return
+
+#given a child questionnaire question-answer data pair (e.g. {m1intmon: 3}),
+#return true if answer belongs to specified year
+def sortByWaveNumber(question, wave):
+    result = False
+    questionChars = list(question)
+    for char in questionChars: #according to question code, first integer will be year number
+        if ord(char) == ord(wave): #check if char is a wave number (1-5)
+            result = True
+            break
+    return result
 
 #given list of data on all children, parse through data, select subset according
 #to sorting function; run kNN on subset in order to classify given child
-def kNNClassifySubsection( sortByFn, child, childData, k ):
+def kNNClassifySubsection( sortByFn, sortParam, childToClassify, childData, k ):
     neighbors = []
-    currentMinChild = none
+    currentMinChild = None
     currentMinCt = 0
-    for c in childData:
-        if sortByFn(c): #only check if neighbor if child is in desired data subset
-            ansInCommon = countAnsInCommon(c, child)
-            addIfNeighbor(c, ansInCommon, child, k, neighbors, currentMinChild, currentMinCt)
-    #return classification of child
-    return majorityVote(neighbors, child)
-childA = [1, 0, 1, 0, 0]
-childB = [0, 0, 0, 0, 0]
-childC = [1, 1, 1, 1, 1]
-childD = [0, 1, 0, 0, 1]
-childE = [1, 0, 1, 1, 0]
-childF = [0, 1, 1, 1, 1]
+    for child in childData:
+        ansInCommon = countAnsInCommon(sortByFn, sortParam, child, childToClassify)
+        print ansInCommon
+    return
 
-neighbors = [ (countAnsInCommon(childA,childD), childA), (countAnsInCommon(childB,childD), childB),
-(countAnsInCommon(childE,childD), childE)]
-addIfNeighbor(childF, countAnsInCommon(childF, childD), childD, 3, neighbors, childE, countAnsInCommon(childE,childD))
-print neighbors
+childA = {'hv3m20_': 'NA', 'f4c2c': '1', 'm4m2': '1', 'f4f5':'-3'}
+childB = {'hv3m20_': 'NA', 'f4c2c': '3', 'm4m2': '1', 'f4f5':'-6'}
+childC = {'hv3m20_': 'NA', 'f4c2c': '2', 'm4m2': '0', 'f4f5':'1'}
+childD = {'hv3m20_': 'NA', 'f4c2c': '4', 'm4m2': '1', 'f4f5':'-3'}
+childE = {'hv3m20_': 'NA', 'f4c2c': '2', 'm4m2': '1', 'f4f5':'-5'}
+childF = {'hv3m20_': 'NA', 'f4c2c': '6', 'm4m2': '3', 'f4f5':'-9'}
+childData = [childB, childC, childD, childE, childF]
+kNNClassifySubsection( sortByWaveNumber, '4', childA, childData, 3)
