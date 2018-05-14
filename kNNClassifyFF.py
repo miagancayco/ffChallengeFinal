@@ -63,6 +63,46 @@ def sortByWaveNumber(question, wave):
             result = True
             break
     return result
+def majorityVote(neighbors, child):
+    grit, gritTotal, gpa, gpaTotal, materialHardship, mHTotal, eviction, eviction0, eviction1, layoff, layoff0, layoff1, jobTraining, jobTraining0, jobTraining1 = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    #count votes for each binary variables
+    #accumulate totals for continuous variables so can take average
+    for n in neighbors:
+        nData = n[1]
+        if nData['grit'] != 'NA':
+            grit += float(nData['grit'])
+            gritTotal +=1
+        if nData['gpa'] != 'NA':
+            gpa += float(nData['gpa'])
+            gpaTotal +=1
+        if nData['materialHardship'] != 'NA':
+            materialHardship += float(nData['materialHardship'])
+            mHTotal +=1
+        if nData['eviction'] != 'NA':
+            if nData['eviction'] == '0':
+                eviction0 += 1
+            else:
+                eviction1 += 1
+        if nData['layoff'] != 'NA':
+            if nData['layoff'] == '0':
+                layoff0 += 1
+            else:
+                layoff1 += 1
+        if nData['jobTraining'] != 'NA':
+            if nData['jobTraining'] == '0':
+                jobTraining0 += 1
+            else:
+                jobTraining1 += 1
+
+    eviction = 0 if eviction0 > eviction1 else 1
+    layoff = 0 if layoff0 > layoff1 else 1
+    jobTraining = 0 if jobTraining0 > jobTraining1 else 1
+    #get the average for continuous variables
+    grit = grit/ gritTotal
+    gpa = gpa/gpaTotal
+    materialHardship = materialHardship/mHTotal
+    result = {'grit': grit, 'gpa': gpa, 'materialHardship' : materialHardship, 'eviction' : eviction, 'layoff' : layoff, 'jobTraining' : jobTraining}
+    return result
 
 #given list of data on all children, parse through data, select subset according
 #to sorting function; run kNN on subset in order to classify given child
@@ -72,14 +112,18 @@ def kNNClassifySubsection(sortByFn, sortParam, childToClassify, childData, k ):
     for child in childData:
         ansInCommon = countAnsInCommon(sortByFn, sortParam, child, childToClassify)
         addIfNeighbor(child, ansInCommon, childToClassify, k, neighbors, minNeighbor)
-    print neighbors
-    return
+    return majorityVote(neighbors, child)
 
-childA = {'hv3m20_': 'NA', 'f4c2c': '1', 'm4m2': '1', 'f4f5':'-3'}
-childB = {'hv3m20_': 'NA', 'f4c2c': '3', 'm4m2': '1', 'f4f5':'-6'}
-childC = {'hv3m20_': 'NA', 'f4c2c': '2', 'm4m2': '0', 'f4f5':'1'}
-childD = {'hv3m20_': 'NA', 'f4c2c': '4', 'm4m2': '1', 'f4f5':'-3'}
-childE = {'hv3m20_': 'NA', 'f4c2c': '2', 'm4m2': '1', 'f4f5':'-5'}
-childF = {'hv3m20_': 'NA', 'f4c2c': '6', 'm4m2': '3', 'f4f5':'-9'}
-childData = [childB, childC, childD, childE, childF]
-kNNClassifySubsection(sortByWaveNumber, '4', childA, childData, 3)
+#childA = {'hv3m20_': 'NA', 'f4c2c': '1', 'm4m2': '1', 'f4f5':'-3'}
+#childB = {'hv3m20_': 'NA', 'f4c2c': '3', 'm4m2': '1', 'f4f5':'-6'}
+#childC = {'hv3m20_': 'NA', 'f4c2c': '2', 'm4m2': '0', 'f4f5':'1'}
+#childD = {'hv3m20_': 'NA', 'f4c2c': '4', 'm4m2': '1', 'f4f5':'-3'}
+#childE = {'hv3m20_': 'NA', 'f4c2c': '2', 'm4m2': '1', 'f4f5':'-5'}
+#childF = {'hv3m20_': 'NA', 'f4c2c': '6', 'm4m2': '3', 'f4f5':'-9'}
+#childData = [childB, childC, childD, childE, childF]
+familyData = parseData()
+first49 = []
+for i in range(49):
+    first49.append((0,familyData[i]))
+childToClassify = familyData[49]
+print majorityVote(first49, childToClassify)
