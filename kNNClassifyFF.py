@@ -19,25 +19,26 @@ def parseData():
                     family.update(row)
     return familyData
 
-def addIfNeighbor(possibleNeighbor, ansInCommon, childToClassify, k, neighbors, minChild, minCt):
+def addIfNeighbor(possibleNeighbor, ansInCommon, childToClassify, k, neighbors, minNeighbor):
+    minCt = minNeighbor[0]
+    minChild = minNeighbor[1]
     #in case where current number of neighbors is not k, do not need to check and
     #see if need to add new neighbor and remove old neighbor
     if len(neighbors) < k:
-        neighbors.append(possibleNeighbor)
-    elif ansInCommon > minCt:
-        neighbors.append((ansInCommon, possibleNeighbor)) # fix so that append with count
-        neighbors.remove((minCt,minChild))
-        minChild = resetMin(neighbors) # check if this line works
+        neighbors.append((ansInCommon,possibleNeighbor))
+    elif ansInCommon > minCt: #otherwise check if number of answers neighbor has in common is greater than current min
+        neighbors.append((ansInCommon, possibleNeighbor))
+        minNeighbor = resetMin(neighbors)
+        neighbors.remove(minNeighbor)
     return
 
 #walk down list of k neighbors, find new min child, and reset pointer
 def resetMin(neighbors):
     result = neighbors[0]
-    minCt = neighbors[0][1]
+    minCt = result[0]
     for n in neighbors:
-        if n[1] < minCt:
+        if n[0] < minCt:
             result = n
-            minCt = n[1]
     return result
 
 #return number of answers have in common
@@ -65,13 +66,13 @@ def sortByWaveNumber(question, wave):
 
 #given list of data on all children, parse through data, select subset according
 #to sorting function; run kNN on subset in order to classify given child
-def kNNClassifySubsection( sortByFn, sortParam, childToClassify, childData, k ):
+def kNNClassifySubsection(sortByFn, sortParam, childToClassify, childData, k ):
     neighbors = []
-    currentMinChild = None
-    currentMinCt = 0
+    minNeighbor = (0,None)
     for child in childData:
         ansInCommon = countAnsInCommon(sortByFn, sortParam, child, childToClassify)
-        print ansInCommon
+        addIfNeighbor(child, ansInCommon, childToClassify, k, neighbors, minNeighbor)
+    print neighbors
     return
 
 childA = {'hv3m20_': 'NA', 'f4c2c': '1', 'm4m2': '1', 'f4f5':'-3'}
@@ -81,4 +82,4 @@ childD = {'hv3m20_': 'NA', 'f4c2c': '4', 'm4m2': '1', 'f4f5':'-3'}
 childE = {'hv3m20_': 'NA', 'f4c2c': '2', 'm4m2': '1', 'f4f5':'-5'}
 childF = {'hv3m20_': 'NA', 'f4c2c': '6', 'm4m2': '3', 'f4f5':'-9'}
 childData = [childB, childC, childD, childE, childF]
-kNNClassifySubsection( sortByWaveNumber, '4', childA, childData, 3)
+kNNClassifySubsection(sortByWaveNumber, '4', childA, childData, 3)
