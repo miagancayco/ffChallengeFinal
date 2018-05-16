@@ -31,9 +31,38 @@ def addIfNeighbor(possibleNeighbor, ansInCommon, childToClassify, k, neighbors):
         possibleNeighbor['ansInCommon'] = ansInCommon
         del neighbors[k-1]
         neighbors.append(possibleNeighbor)
-        neighbors = sorted(neighbors, key = lambda k: k['ansInCommon'], reverse=True) #fuck it's not sorting - to fix just try a different method
+        neighbors = sorted(neighbors, key = lambda k: k['ansInCommon'], reverse=True)
     return
-
+#sort data according to answers in common with child to classify and return first k
+def getKNeighbors(familyData, k):
+    sortedFamilyData= sorted(familyData, key = lambda k: k['ansInCommon'], reverse=True)
+    kNeighbors= sortedFamilyData[0:k]
+    return kNeighbors
+def getNeighbors(familyData, k):
+    kNeighbors = []
+    totalNeighbors = 0
+    #loop through distances list, and find first
+    #k-closest neighbors
+    while (totalNeighbors < k):
+        #start by assuming that first data vector in familyData is closest neighbor
+        closestNeighhor = familyData[0]
+        if closestNeighhor in kNeighbors: #ensure closestNeighhor not already a kNeighhbor
+            for i in range(1, len(familyData)):
+                if familyData[i] not in kNeighbors:
+                    closestNeighhor = familyData[i]
+        maxAnsInCommon = closestNeighhor['ansInCommon']
+        #find ith closest distance
+        for possibleNeighbor in familyData:
+            if possibleNeighbor in kNeighbors:
+                continue
+            currAnsInCommon = possibleNeighbor['ansInCommon']
+            if currAnsInCommon > maxAnsInCommon:
+                closestNeighhor = possibleNeighbor
+        #once find closest neighbor, add to result, and remove from distances
+        #list so can find next max
+        kNeighbors.append(closestNeighhor)
+        totalNeighbors += 1
+    return kNeighbors
 #walk down list of k neighbors, find new min child, and reset pointer
 #def resetMin(neighbors):
 #    result = neighbors[0]
@@ -76,28 +105,27 @@ def majorityVote(neighbors, child):
     #count votes for each binary variables
     #accumulate totals for continuous variables so can take average
     for n in neighbors:
-        nData = n[1]
-        if nData['grit'] != 'NA':
-            grit += float(nData['grit'])
+        if n['grit'] != 'NA':
+            grit += float(n['grit'])
             gritTotal +=1
-        if nData['gpa'] != 'NA':
-            gpa += float(nData['gpa'])
+        if n['gpa'] != 'NA':
+            gpa += float(n['gpa'])
             gpaTotal +=1
-        if nData['materialHardship'] != 'NA':
-            materialHardship += float(nData['materialHardship'])
+        if n['materialHardship'] != 'NA':
+            materialHardship += float(n['materialHardship'])
             mHTotal +=1
-        if nData['eviction'] != 'NA':
-            if nData['eviction'] == '0':
+        if n['eviction'] != 'NA':
+            if n['eviction'] == '0':
                 eviction0 += 1
             else:
                 eviction1 += 1
-        if nData['layoff'] != 'NA':
-            if nData['layoff'] == '0':
+        if n['layoff'] != 'NA':
+            if n['layoff'] == '0':
                 layoff0 += 1
             else:
                 layoff1 += 1
-        if nData['jobTraining'] != 'NA':
-            if nData['jobTraining'] == '0':
+        if n['jobTraining'] != 'NA':
+            if n['jobTraining'] == '0':
                 jobTraining0 += 1
             else:
                 jobTraining1 += 1
@@ -115,33 +143,20 @@ def majorityVote(neighbors, child):
 #given list of data on all children, parse through data, select subset according
 #to sorting function; run kNN on subset in order to classify given child
 def kNNClassifySubsection(sortByFn, sortParam, childToClassify, childData, k ):
-    neighbors = []
-    minNeighbor = (0,None)
     for child in childData:
         ansInCommon = countAnsInCommon(sortByFn, sortParam, child, childToClassify)
-        addIfNeighbor(child, ansInCommon, childToClassify, k, neighbors, minNeighbor)
+        child['ansInCommon'] = ansInCommon
+    neighbors = getKNeighbors(childData, k)
     return majorityVote(neighbors, child)
 
-#childA = {'hv3m20_': 'NA', 'f4c2c': '1', 'm4m2': '1', 'f4f5':'-3'}
-#childB = {'hv3m20_': 'NA', 'f4c2c': '3', 'm4m2': '1', 'f4f5':'-6'}
-#childC = {'hv3m20_': 'NA', 'f4c2c': '2', 'm4m2': '0', 'f4f5':'1'}
-#childD = {'hv3m20_': 'NA', 'f4c2c': '4', 'm4m2': '1', 'f4f5':'-3'}
-#childE = {'hv3m20_': 'NA', 'f4c2c': '2', 'm4m2': '1', 'f4f5':'-5'}
-#childF = {'hv3m20_': 'NA', 'f4c2c': '6', 'm4m2': '3', 'f4f5':'-9'}
-#childData = [childB, childC, childD, childE, childF]
 familyData = parseData()
 first49 = []
 for i in range(49):
     first49.append(familyData[i])
 childToClassify = familyData[49]
 neighbors = []
-answers = []
 for child in first49:
     ansInCommon = countAnsInCommon(sortByWaveNumber, '1', child, childToClassify)
-    answers.append(ansInCommon)
-    addIfNeighbor(child, ansInCommon, childToClassify, 3, neighbors)
-answers.sort()
-print answers
-print "***********"
-for n in neighbors:
-    print n['ansInCommon']
+    child['ansInCommon'] = ansInCommon
+neighbors = getKNeighbors(first49, 11)
+print majorityVote(neighbors, childToClassify)
