@@ -19,27 +19,29 @@ def parseData():
                     family.update(row)
     return familyData
 
-def addIfNeighbor(possibleNeighbor, ansInCommon, childToClassify, k, neighbors, minNeighbor):
-    minCt = minNeighbor[0]
-    minChild = minNeighbor[1]
+def addIfNeighbor(possibleNeighbor, ansInCommon, childToClassify, k, neighbors):
     #in case where current number of neighbors is not k, do not need to check and
     #see if need to add new neighbor and remove old neighbor
     if len(neighbors) < k:
-        neighbors.append((ansInCommon,possibleNeighbor))
-    elif ansInCommon > minCt: #otherwise check if number of answers neighbor has in common is greater than current min
-        neighbors.append((ansInCommon, possibleNeighbor))
-        minNeighbor = resetMin(neighbors)
-        neighbors.remove(minNeighbor)
+        possibleNeighbor['ansInCommon'] = ansInCommon
+        neighbors.append(possibleNeighbor)
+    #otherwise check if number of answers neighbor has in common with child to classify
+    #is greater than current min; if so, add to neighbors list
+    elif ansInCommon > neighbors[k-1]['ansInCommon']:
+        possibleNeighbor['ansInCommon'] = ansInCommon
+        del neighbors[k-1]
+        neighbors.append(possibleNeighbor)
+        neighbors = sorted(neighbors, key = lambda k: k['ansInCommon'], reverse=True) #fuck it's not sorting - to fix just try a different method
     return
 
 #walk down list of k neighbors, find new min child, and reset pointer
-def resetMin(neighbors):
-    result = neighbors[0]
-    minCt = result[0]
-    for n in neighbors:
-        if n[0] < minCt:
-            result = n
-    return result
+#def resetMin(neighbors):
+#    result = neighbors[0]
+#    minCt = result.get('ansInCommon')
+#    for n in neighbors:
+#        if n.get('ansInCommon') < minCt:
+#            result = n
+#    return result
 
 #return number of answers have in common
 def countAnsInCommon(sortByFn, sortParam, childA, childB):
@@ -57,11 +59,17 @@ def countAnsInCommon(sortByFn, sortParam, childA, childB):
 #return true if answer belongs to specified year
 def sortByWaveNumber(question, wave):
     result = False
+    #deal with ffcc and kind questions from survey if wave number is not 5
+    if ord(wave) != 53 and  question[0:4] == 'ffcc' or question[0:4] == 'kind':
+            return result
     questionChars = list(question)
+    yearNum = ''
     for char in questionChars: #according to question code, first integer will be year number
-        if ord(char) == ord(wave): #check if char is a wave number (1-5)
-            result = True
+        if ord(char) > 48 and ord(char) < 54 : #check if char is a wave number (1-5)
+            yearNum = char
             break
+    if yearNum == wave:
+        result = True
     return result
 def majorityVote(neighbors, child):
     grit, gritTotal, gpa, gpaTotal, materialHardship, mHTotal, eviction, eviction0, eviction1, layoff, layoff0, layoff1, jobTraining, jobTraining0, jobTraining1 = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
@@ -124,6 +132,16 @@ def kNNClassifySubsection(sortByFn, sortParam, childToClassify, childData, k ):
 familyData = parseData()
 first49 = []
 for i in range(49):
-    first49.append((0,familyData[i]))
+    first49.append(familyData[i])
 childToClassify = familyData[49]
-print majorityVote(first49, childToClassify)
+neighbors = []
+answers = []
+for child in first49:
+    ansInCommon = countAnsInCommon(sortByWaveNumber, '1', child, childToClassify)
+    answers.append(ansInCommon)
+    addIfNeighbor(child, ansInCommon, childToClassify, 3, neighbors)
+answers.sort()
+print answers
+print "***********"
+for n in neighbors:
+    print n['ansInCommon']
