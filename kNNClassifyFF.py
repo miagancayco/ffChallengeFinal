@@ -7,7 +7,7 @@ def parseData():
         tReader = csv.DictReader(csvfile)
         for row in tReader:
             familyData.append(row)
-    with open('background.csv') as csvfile:
+    with open('backgroundcopy.csv') as csvfile:
         bReader = csv.DictReader(csvfile)
         for row in bReader:
             famID = row.get('challengeID')
@@ -63,16 +63,6 @@ def getNeighbors(familyData, k):
         kNeighbors.append(closestNeighhor)
         totalNeighbors += 1
     return kNeighbors
-#walk down list of k neighbors, find new min child, and reset pointer
-#def resetMin(neighbors):
-#    result = neighbors[0]
-#    minCt = result.get('ansInCommon')
-#    for n in neighbors:
-#        if n.get('ansInCommon') < minCt:
-#            result = n
-#    return result
-
-#return number of answers have in common
 def countAnsInCommon(sortByFn, sortParam, childA, childB):
     notAsked = '-5' #value indicates that person was not asked given question
     skipped = '-6' # value indicates that interviewer skipped question
@@ -143,20 +133,9 @@ def majorityVote(neighbors, child):
 #given list of data on all children, parse through data, select subset according
 #to sorting function; run kNN on subset in order to classify given child
 def kNNClassifySubsection(sortByFn, sortParam, childToClassify, childData, k ):
-    for child in childData:
+    for child in childData: # iterate through data and count answers have in common with child to classify
         ansInCommon = countAnsInCommon(sortByFn, sortParam, child, childToClassify)
         child['ansInCommon'] = ansInCommon
     neighbors = getKNeighbors(childData, k)
     return majorityVote(neighbors, child)
-
-familyData = parseData()
-first49 = []
-for i in range(49):
-    first49.append(familyData[i])
-childToClassify = familyData[49]
-neighbors = []
-for child in first49:
-    ansInCommon = countAnsInCommon(sortByWaveNumber, '1', child, childToClassify)
-    child['ansInCommon'] = ansInCommon
-neighbors = getKNeighbors(first49, 11)
-print majorityVote(neighbors, childToClassify)
+print parseData()
