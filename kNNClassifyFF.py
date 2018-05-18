@@ -48,14 +48,14 @@ def countAnsInCommon(childA, childB):
         if question in childB and question != notAsked and question != skipped and question != notInWave and question != 'NA' and childB[question] == childA[question]:
             commonAns += 1
     return commonAns
-def countSortedAnsInCommon(childA, childB, sortByFn, sortParam):
+def countSortedAnsInCommon(childA, childB, sortByFn):
     notAsked = '-5' #value indicates that person was not asked given question
     skipped = '-6' # value indicates that interviewer skipped question
     notInWave = '-9' #indicates question was not asked in wave
     #iterating through all answers in child data and counting all answers have in common
     commonAns = 0
     for question in childA:
-        if sortByFn(question, sortParam) and question != notAsked and question != skipped and question != notInWave and question != 'NA' and childB[question] == childA[question]:
+        if sortByFn(question) and question != notAsked and question != skipped and question != notInWave and question != 'NA' and childB[question] == childA[question]:
             commonAns += 1
     return commonAns
 #given a child questionnaire question-answer data pair (e.g. {m1intmon: 3}),
@@ -115,22 +115,26 @@ def majorityVote(neighbors, child):
     return result
 #returns true if question pertains to education and employment status of parent
 def isParentEducationQuestion(question):
-    result = false
+    result = False
     if question[0] == 'm' or question[0] == 'f': #check if was answered by parent
-        if (question[1] == '2' or question[1] == '4' and question[2] == 'k') or (question[1] == '5' and question[2] == 'i'): #check wave number - education questions only asked in waves 2, 4 and 5
-            result = true
-    return true
+    #check wave and section number - education questions only asked in section k for waves 2 and 4 and section i in wave 5
+        if question[1] == '2' or question[1] == '4':
+            if question[2] == 'k':
+                result = True
+        elif question[1] == '5' and question[2] == 'i':
+            result = True
+    return result
 
 #given list of data on all children, parse through data, select subset according
 #to sorting function; run kNN on subset in order to classify given child
-def kNNClassify(childToClassify, childData, k, sortByFn=None, sortParam=None ):
+def kNNClassify(childToClassify, childData, k, sortByFn=None):
     for child in childData: # iterate through data and count answers have in common with child to classify
-        ansInCommon = countSortedAnsInCommon(sortByFn, sortParam, child, childToClassify) if sortByFn != None else countAnsInCommon(child, childToClassify)
+        ansInCommon = countSortedAnsInCommon(child, childToClassify, sortByFn) if sortByFn != None else countAnsInCommon(child, childToClassify)
         child['ansInCommon'] = ansInCommon
     neighbors = getKNeighbors(childData, k)
     return majorityVote(neighbors, childToClassify)
 def recordResults():
-    with open('resultsRegKNN.csv', 'w') as csvfile:
+    with open('resultskNNClassifyEducationalFactors.csv', 'w') as csvfile:
         fieldnames = ['challengeID', 'gpa', 'grit', 'materialHardship', 'eviction', 'layoff', 'jobTraining']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
@@ -139,7 +143,7 @@ def recordResults():
         testSet = familyData[1]
         for child in testSet:
             print child['challengeID']
-            prediction = kNNClassify(child, trainSet, 11)
+            prediction = kNNClassify(child, trainSet, 11, isParentEducationQuestion)
             print prediction
             writer.writerow({'challengeID': prediction['challengeID'], 'gpa': prediction['gpa'], 'grit': prediction['grit'], 'materialHardship': prediction['materialHardship'], 'eviction': prediction['eviction'], 'layoff': prediction['layoff'], 'jobTraining': prediction['jobTraining']})
     return
