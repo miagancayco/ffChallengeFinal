@@ -33,49 +33,10 @@ def parseData():
                 if testFamID == famID:
                     family.update(row)
     return familyData
-def addIfNeighbor(possibleNeighbor, ansInCommon, childToClassify, k, neighbors):
-    #in case where current number of neighbors is not k, do not need to check and
-    #see if need to add new neighbor and remove old neighbor
-    if len(neighbors) < k:
-        possibleNeighbor['ansInCommon'] = ansInCommon
-        neighbors.append(possibleNeighbor)
-    #otherwise check if number of answers neighbor has in common with child to classify
-    #is greater than current min; if so, add to neighbors list
-    elif ansInCommon > neighbors[k-1]['ansInCommon']:
-        possibleNeighbor['ansInCommon'] = ansInCommon
-        del neighbors[k-1]
-        neighbors.append(possibleNeighbor)
-        neighbors = sorted(neighbors, key = lambda k: k['ansInCommon'], reverse=True)
-    return
 #sort data according to answers in common with child to classify and return first k
 def getKNeighbors(familyData, k):
     sortedFamilyData= sorted(familyData, key = lambda k: k['ansInCommon'], reverse=True)
     kNeighbors= sortedFamilyData[0:k]
-    return kNeighbors
-def getNeighbors(familyData, k):
-    kNeighbors = []
-    totalNeighbors = 0
-    #loop through distances list, and find first
-    #k-closest neighbors
-    while (totalNeighbors < k):
-        #start by assuming that first data vector in familyData is closest neighbor
-        closestNeighhor = familyData[0]
-        if closestNeighhor in kNeighbors: #ensure closestNeighhor not already a kNeighhbor
-            for i in range(1, len(familyData)):
-                if familyData[i] not in kNeighbors:
-                    closestNeighhor = familyData[i]
-        maxAnsInCommon = closestNeighhor['ansInCommon']
-        #find ith closest distance
-        for possibleNeighbor in familyData:
-            if possibleNeighbor in kNeighbors:
-                continue
-            currAnsInCommon = possibleNeighbor['ansInCommon']
-            if currAnsInCommon > maxAnsInCommon:
-                closestNeighhor = possibleNeighbor
-        #once find closest neighbor, add to result, and remove from distances
-        #list so can find next max
-        kNeighbors.append(closestNeighhor)
-        totalNeighbors += 1
     return kNeighbors
 def countAnsInCommon(childA, childB):
     notAsked = '-5' #value indicates that person was not asked given question
@@ -147,34 +108,39 @@ def majorityVote(neighbors, child):
     layoff = 0 if layoff0 > layoff1 else 1
     jobTraining = 0 if jobTraining0 > jobTraining1 else 1
     #get the average for continuous variables
-    grit = grit/ gritTotal
-    gpa = gpa/gpaTotal
-    materialHardship = materialHardship/mHTotal
-    result = {'grit': grit, 'gpa': gpa, 'materialHardship' : materialHardship, 'eviction' : eviction, 'layoff' : layoff, 'jobTraining' : jobTraining}
+    grit = grit/ gritTotal if gritTotal != 0 else 'NA'
+    gpa = gpa/gpaTotal if gpaTotal != 0 else 'NA'
+    materialHardship = materialHardship/mHTotal if mHTotal != 0 else 'NA'
+    result = {'challengeID': child['challengeID'], 'grit': grit, 'gpa': gpa, 'materialHardship' : materialHardship, 'eviction' : eviction, 'layoff' : layoff, 'jobTraining' : jobTraining}
     return result
-#returns true if child is in training set
-#child is only in training set if already classified i.e. grit, gpa, materialHardship
-#eviction, layoff, and jobTraining scores already available
-def isInTrainingSet(child):
-    result = False
-    if 'grit' in child:
-        result = True
-    return result
+#returns true if question pertains to education and employment status of parent
+def isParentEducationQuestion(question):
+    result = false
+    if question[0] == 'm' or question[0] == 'f': #check if was answered by parent
+        if (question[1] == '2' or question[1] == '4' and question[2] == 'k') or (question[1] == '5' and question[2] == 'i'): #check wave number - education questions only asked in waves 2, 4 and 5
+            result = true
+    return true
+
 #given list of data on all children, parse through data, select subset according
 #to sorting function; run kNN on subset in order to classify given child
 def kNNClassify(childToClassify, childData, k, sortByFn=None, sortParam=None ):
     for child in childData: # iterate through data and count answers have in common with child to classify
-        if isInTrainingSet(child): #do not classify based on children not in training data
-            ansInCommon = countSortedAnsInCommon(sortByFn, sortParam, child, childToClassify) if sortByFn != None else countAnsInCommon(child, childToClassify)
-            child['ansInCommon'] = ansInCommon
+        ansInCommon = countSortedAnsInCommon(sortByFn, sortParam, child, childToClassify) if sortByFn != None else countAnsInCommon(child, childToClassify)
+        child['ansInCommon'] = ansInCommon
     neighbors = getKNeighbors(childData, k)
-    for n in neighbors:
-        print n
-        print n['ansInCommon']
-    return majorityVote(neighbors, child)
-
-familyData = parseData()
-trainSet = familyData[0]
-testSet = familyData[1]
-childToClassify = testSet[1]
-print kNNClassify(childToClassify, trainSet, 11)
+    return majorityVote(neighbors, childToClassify)
+def recordResults():
+    with open('resultsRegKNN.csv', 'w') as csvfile:
+        fieldnames = ['challengeID', 'gpa', 'grit', 'materialHardship', 'eviction', 'layoff', 'jobTraining']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+        familyData = parseData()
+        trainSet = familyData[0]
+        testSet = familyData[1]
+        for child in testSet:
+            print child['challengeID']
+            prediction = kNNClassify(child, trainSet, 11)
+            print prediction
+            writer.writerow({'challengeID': prediction['challengeID'], 'gpa': prediction['gpa'], 'grit': prediction['grit'], 'materialHardship': prediction['materialHardship'], 'eviction': prediction['eviction'], 'layoff': prediction['layoff'], 'jobTraining': prediction['jobTraining']})
+    return
+recordResults()
