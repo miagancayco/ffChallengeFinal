@@ -2,23 +2,37 @@ import csv
 #given training set data and background data, combine into single list of
 #data on all children
 def parseData():
-    familyData = [] # list of child lists that will return
+    trainSet = []
+    testSet = []
+    familyData = (trainSet,testSet) # list of child lists that will return
     with open('train.csv') as csvfile:
         tReader = csv.DictReader(csvfile)
         for row in tReader:
-            familyData.append(row)
-    with open('backgroundcopy.csv') as csvfile:
+            trainSet.append(row)
+    with open('test.csv') as csvfile:
+        tReader = csv.DictReader(csvfile)
+        for row in tReader:
+            testSet.append(row)
+    with open('background.csv') as csvfile: #ugh this code is so ugly
         bReader = csv.DictReader(csvfile)
         for row in bReader:
-            famID = row.get('challengeID')
-            for family in familyData:
-                familyID = family.get('challengeID')
+            famID = float(row.get('challengeID'))
+            #separate test and training sets
+            for family in trainSet:
+                trainFamID = float(family.get('challengeID'))
                 #add corresponding background information to appropriate family
                 #in familyData by checking ID number
-                if famID == familyID:
+                if trainFamID > famID:
+                    break
+                if famID == trainFamID:
+                    family.update(row)
+            for family in testSet:
+                testFamID = float(family.get('challengeID'))
+                if testFamID > famID:
+                    break
+                if testFamID == famID:
                     family.update(row)
     return familyData
-
 def addIfNeighbor(possibleNeighbor, ansInCommon, childToClassify, k, neighbors):
     #in case where current number of neighbors is not k, do not need to check and
     #see if need to add new neighbor and remove old neighbor
@@ -63,7 +77,17 @@ def getNeighbors(familyData, k):
         kNeighbors.append(closestNeighhor)
         totalNeighbors += 1
     return kNeighbors
-def countAnsInCommon(sortByFn, sortParam, childA, childB):
+def countAnsInCommon(childA, childB):
+    notAsked = '-5' #value indicates that person was not asked given question
+    skipped = '-6' # value indicates that interviewer skipped question
+    notInWave = '-9' #indicates question was not asked in wave
+    #iterating through all answers in child data and counting all answers have in common
+    commonAns = 0
+    for question in childA:
+        if question in childB and question != notAsked and question != skipped and question != notInWave and question != 'NA' and childB[question] == childA[question]:
+            commonAns += 1
+    return commonAns
+def countSortedAnsInCommon(childA, childB, sortByFn, sortParam):
     notAsked = '-5' #value indicates that person was not asked given question
     skipped = '-6' # value indicates that interviewer skipped question
     notInWave = '-9' #indicates question was not asked in wave
@@ -73,7 +97,6 @@ def countAnsInCommon(sortByFn, sortParam, childA, childB):
         if sortByFn(question, sortParam) and question != notAsked and question != skipped and question != notInWave and question != 'NA' and childB[question] == childA[question]:
             commonAns += 1
     return commonAns
-
 #given a child questionnaire question-answer data pair (e.g. {m1intmon: 3}),
 #return true if answer belongs to specified year
 def sortByWaveNumber(question, wave):
@@ -129,13 +152,29 @@ def majorityVote(neighbors, child):
     materialHardship = materialHardship/mHTotal
     result = {'grit': grit, 'gpa': gpa, 'materialHardship' : materialHardship, 'eviction' : eviction, 'layoff' : layoff, 'jobTraining' : jobTraining}
     return result
-
+#returns true if child is in training set
+#child is only in training set if already classified i.e. grit, gpa, materialHardship
+#eviction, layoff, and jobTraining scores already available
+def isInTrainingSet(child):
+    result = False
+    if 'grit' in child:
+        result = True
+    return result
 #given list of data on all children, parse through data, select subset according
 #to sorting function; run kNN on subset in order to classify given child
-def kNNClassifySubsection(sortByFn, sortParam, childToClassify, childData, k ):
+def kNNClassify(childToClassify, childData, k, sortByFn=None, sortParam=None ):
     for child in childData: # iterate through data and count answers have in common with child to classify
-        ansInCommon = countAnsInCommon(sortByFn, sortParam, child, childToClassify)
-        child['ansInCommon'] = ansInCommon
+        if isInTrainingSet(child): #do not classify based on children not in training data
+            ansInCommon = countSortedAnsInCommon(sortByFn, sortParam, child, childToClassify) if sortByFn != None else countAnsInCommon(child, childToClassify)
+            child['ansInCommon'] = ansInCommon
     neighbors = getKNeighbors(childData, k)
+    for n in neighbors:
+        print n
+        print n['ansInCommon']
     return majorityVote(neighbors, child)
-print parseData()
+
+familyData = parseData()
+trainSet = familyData[0]
+testSet = familyData[1]
+childToClassify = testSet[1]
+print kNNClassify(childToClassify, trainSet, 11)
